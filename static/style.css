@@ -1,0 +1,59 @@
+body {
+    background-color: #333; /* Dark gray background */
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+}
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%px;
+    gap: 30px;
+}
+.arrow {
+    font-size: 24px; /* Adjust the size of the arrow */
+}
+.options {
+    margin-left: -5px;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+}
+select, button, input[type="file"] {
+    padding: 10px;
+    margin: 5px;
+    background: #555; /* Lighter gray for inputs */
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #777;
+}
+img {
+    width: 400px; /* Adjust size as necessary */
+    height: auto;
+}
+.method-name {
+    text-align: center;
+}
+.spinner {
+    border: 4px solid rgba(0,0,0,.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #09f;
+    animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

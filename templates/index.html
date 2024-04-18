@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Viewer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <form id="imageForm">
+        <div class="container">
+            <div style="margin-bottom: -100px">
+                <img src="/static/images/white_square.jpg" alt="First image">
+                <div class="options">
+                    <input type="file" id="fileInput">
+                    <select id="methodSelect">
+                        <option value="OpenCV-Python">OpenCV-Python</option>
+                        <option value="PyTorch">PyTorch</option>
+                        <option value="PyTorch Image Models (timm)">PyTorch Image Models (timm)</option>
+                    </select>
+                    <button type="submit">Check an image</button>
+                </div>
+            </div>
+            <div class="arrow">&rarr;</div>
+            <div style="margin-bottom: 100px">
+                <p class="method-name">OpenCV-Python</p>
+                <img src="/static/images/white_square.jpg" alt="Second Image" id="imageDisplay">
+                <div id="spinner" class="spinner" style="display: none;"></div>
+            </div>
+        </div>
+    </form>
+
+    <script type="text/javascript" src="/static/script.js"></script>
+</body>
+</html>
