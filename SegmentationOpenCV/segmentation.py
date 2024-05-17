@@ -17,7 +17,7 @@ class Segmentation:
     EMPTY_THRESHOLD = 200
     THREAD_THRESHOLD = 100
 
-    def get_answer_mask(self, expected_mask, class_number):
+    def get_binary_answer_mask(self, expected_mask, class_number):
         """
         Generate a binary mask for a specific class from the expected mask.
 
@@ -58,13 +58,13 @@ class Segmentation:
         :param expected_mask: The input expected mask where different classes are represented by different integer values.
         :return: A tuple containing three binary masks (one for each class: gray substance, threads, and empty space).
         """
-        answer_mask1_gray_substance = self.get_answer_mask(expected_mask, 0)
-        answer_mask2_threads = self.get_answer_mask(expected_mask, 1)
-        answer_mask3_empty_space = self.get_answer_mask(expected_mask, 2)
+        answer_mask1_gray_substance = self.get_binary_answer_mask(expected_mask, 0)
+        answer_mask2_threads = self.get_binary_answer_mask(expected_mask, 1)
+        answer_mask3_empty_space = self.get_binary_answer_mask(expected_mask, 2)
 
         return answer_mask1_gray_substance, answer_mask2_threads, answer_mask3_empty_space
 
-    def create_mask(self, img, class_number):
+    def create_binary_mask(self, img, class_number):
         """
         Creates a mask based on color thresholding in the HSV color space.
 
@@ -104,8 +104,32 @@ class Segmentation:
         :param img: Input image in BGR format.
         :return: A tuple containing three binary masks (one for each class: gray substance, threads, and empty space).
         """
-        mask1_gray_substance = self.create_mask(img, 0)
-        mask2_threads = self.create_mask(img, 1)
-        mask3_empty_space = self.create_mask(img, 2)
+        mask1_gray_substance = self.create_binary_mask(img, 0)
+        mask2_threads = self.create_binary_mask(img, 1)
+        mask3_empty_space = self.create_binary_mask(img, 2)
 
         return mask1_gray_substance, mask2_threads, mask3_empty_space
+
+    def create_ternary_mask(self, img):
+        """
+        Create a ternary mask based on color thresholding in the HSV color space.
+
+        This method takes an image as input, converts it to the HSV color space, applies thresholding,
+        and generates a ternary mask where pixels are labeled as 0, 1, or 2 based on the following criteria:
+        - Pixels with values below the EMPTY_THRESHOLD are labeled as 1.
+        - Pixels with values above the THREAD_THRESHOLD are labeled as 0.
+        - Pixels with values between the EMPTY_THRESHOLD and THREAD_THRESHOLD are labeled as 2.
+
+        :param img: Input image in BGR format.
+        :return: Ternary mask represented as a numpy array, where pixels are labeled as 0, 1, or 2
+                 based on the defined thresholds.
+        """
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        res_mask = np.zeros(shape=img.shape, dtype=np.uint8)
+        _, thresh1 = cv2.threshold(hsv[:, :, 2], self.EMPTY_THRESHOLD, 255, cv2.THRESH_BINARY)  # empty
+        _, thresh2 = cv2.threshold(hsv[:, :, 2], self.THREAD_THRESHOLD, 255, cv2.THRESH_BINARY)  # threads
+
+        res_mask[thresh1 != 0] = 1
+        res_mask[thresh2 == 0] = 2
+
+        return res_mask
