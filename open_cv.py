@@ -1,10 +1,15 @@
 import cv2
 import base64
+import numpy as np
+from SegmentationOpenCV.segmentation import Segmentation
 
 
 def open_cv(file_to_check):
-    image_path = './static/images/one.png'
+    segmentation = Segmentation()
+    image = np.frombuffer(file_to_check.read(), np.uint8)
+    img = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
-    with open(image_path, 'rb') as image:
-        encoded_string = base64.b64encode(image.read()).decode('utf-8')
-        return encoded_string
+    # Process the image with segmentation
+    ternary_mask = segmentation.create_ternary_mask(img)
+    print(ternary_mask)
+    return ternary_mask

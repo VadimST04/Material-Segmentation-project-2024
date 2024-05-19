@@ -48,15 +48,10 @@ function processRawFile(file) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Success:', data);
-
-        if (data.result) {
-            imageDisplay.src = 'data:image/png;base64,' + data.result;
-        } else {
-            console.error('No image returned from server');
-        }
+    .then(response => response.blob())
+    .then(blob => {
+        var url = URL.createObjectURL(blob);
+        imageDisplay.src = url;
 
         spinner.style.display = 'none';
         imageDisplay.style.display = 'block';

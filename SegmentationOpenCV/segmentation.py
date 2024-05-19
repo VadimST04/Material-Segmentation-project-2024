@@ -132,4 +132,9 @@ class Segmentation:
         res_mask[thresh1 != 0] = 1
         res_mask[thresh2 == 0] = 2
 
+        # Map the ternary mask values to grayscale values
+        color_map = {0: 0, 1: 125, 2: 255}
+        for key, value in color_map.items():
+            res_mask[res_mask == key] = value
+
         return res_mask
