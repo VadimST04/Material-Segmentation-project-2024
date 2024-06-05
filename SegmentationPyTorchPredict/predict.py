@@ -1,27 +1,24 @@
-import argparse
 import logging
-import os
-
 import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
-from torchvision import transforms
+from SegmentationPyTorchPredict.utils.data_loading import BasicDataset
+from SegmentationPyTorchPredict.unet import UNet
 
-from utils.data_loading import BasicDataset
-from unet import UNet
-from utils.utils import plot_img_and_mask
+# Set up logging to a file
+log_file_path = r'C:\LearningProjects\Material-Segmentation-project-2024\Material-Segmentation-project-2024\SegmentationPyTorchPredict\logs.txt'
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s', filename=log_file_path, filemode='w')
 
-def predict_img(net,
-                full_img,
-                device,
-                scale_factor=1,
-                out_threshold=0.5):
+
+def predict_img(net, full_img, device, scale_factor=1, out_threshold=0.5):
+    logging.info("Preprocessing the image for prediction")
     net.eval()
     img = torch.from_numpy(BasicDataset.preprocess(None, full_img, scale_factor, is_mask=False))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
+    logging.info("Running the prediction on the network")
     with torch.no_grad():
         output = net(img).cpu()
         output = F.interpolate(output, (full_img.size[1], full_img.size[0]), mode='bilinear')
@@ -30,36 +27,30 @@ def predict_img(net,
         else:
             mask = torch.sigmoid(output) > out_threshold
 
+    logging.info("Prediction completed")
     return mask[0].long().squeeze().numpy()
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Predict masks from input images')
-    parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE',
-                        help='Specify the file in which the model is stored')
-    parser.add_argument('--input', '-i', metavar='INPUT', nargs='+', help='Filenames of input images', required=True)
-    parser.add_argument('--output', '-o', metavar='OUTPUT', nargs='+', help='Filenames of output images')
-    parser.add_argument('--viz', '-v', action='store_true',
-                        help='Visualize the images as they are processed')
-    parser.add_argument('--no-save', '-n', action='store_true', help='Do not save the output masks')
-    parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
-                        help='Minimum probability value to consider a mask pixel white')
-    parser.add_argument('--scale', '-s', type=float, default=0.5,
-                        help='Scale factor for the input images')
-    parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
-    parser.add_argument('--classes', '-c', type=int, default=3, help='Number of classes')
-    
-    return parser.parse_args()
+def get_model_and_device(model_path='./SegmentationPyTorchPredict/CurrentModel.pth', n_classes=3, bilinear=False):
+    logging.info("Initializing the UNet model")
+    net = UNet(n_channels=3, n_classes=n_classes, bilinear=bilinear)
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    logging.info(f'Loading model {model_path}')
+    logging.info(f'Using device {device}')
 
-def get_output_filenames(args):
-    def _generate_name(fn):
-        return f'{os.path.splitext(fn)[0]}_OUT.png'
+    net.to(device=device)
+    logging.info("Loading the state dictionary for the model")
+    state_dict = torch.load(model_path, map_location=device)
+    mask_values = state_dict.pop('mask_values', [0, 1])
+    net.load_state_dict(state_dict)
 
-    return args.output or list(map(_generate_name, args.input))
+    logging.info("Model loaded!")
+    return net, device, mask_values
 
 
 def mask_to_image(mask: np.ndarray, mask_values):
+    logging.info("Converting mask to image format")
     if isinstance(mask_values[0], list):
         out = np.zeros((mask.shape[-2], mask.shape[-1], len(mask_values[0])), dtype=np.uint8)
     elif mask_values == [0, 1]:
@@ -70,48 +61,29 @@ def mask_to_image(mask: np.ndarray, mask_values):
     if mask.ndim == 3:
         mask = np.argmax(mask, axis=0)
 
+    # Update the mask values if there are three classes
+    if len(mask_values) == 3:
+        mask_values = [1, 125, 255]
+
     for i, v in enumerate(mask_values):
         out[mask == i] = v
 
     return Image.fromarray(out)
 
 
-if __name__ == '__main__':
-    args = get_args()
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+def pytorch_image_models(image_file):
+    net, device, mask_values = get_model_and_device()
 
-    in_files = args.input
-    out_files = get_output_filenames(args)
+    logging.info("Opening the input image")
+    img = Image.open(image_file)
 
-    net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    logging.info("Predicting the mask for the image")
+    mask = predict_img(net=net,
+                       full_img=img,
+                       scale_factor=0.5,
+                       out_threshold=0.5,
+                       device=device)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logging.info(f'Loading model {args.model}')
-    logging.info(f'Using device {device}')
-
-    net.to(device=device)
-    state_dict = torch.load(args.model, map_location=device)
-    mask_values = state_dict.pop('mask_values', [0, 1])
-    net.load_state_dict(state_dict)
-
-    logging.info('Model loaded!')
-
-    for i, filename in enumerate(in_files):
-        logging.info(f'Predicting image {filename} ...')
-        img = Image.open(filename)
-
-        mask = predict_img(net=net,
-                           full_img=img,
-                           scale_factor=args.scale,
-                           out_threshold=args.mask_threshold,
-                           device=device)
-
-        if not args.no_save:
-            out_filename = out_files[i]
-            result = mask_to_image(mask, mask_values)
-            result.save(out_filename)
-            logging.info(f'Mask saved to {out_filename}')
-
-        if args.viz:
-            logging.info(f'Visualizing results for image {filename}, close to continue...')
-            plot_img_and_mask(img, mask)
+    logging.info("Converting the mask to an image file")
+    result = mask_to_image(mask, mask_values)
+    return result

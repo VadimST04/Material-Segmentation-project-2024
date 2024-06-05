@@ -48,7 +48,12 @@ function processRawFile(file) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.blob())
+    .then(response => {
+        if (response.status === 400) {
+            return response.text().then(text => { throw new Error(text); });
+        }
+        return response.blob();
+    })
     .then(blob => {
         var url = URL.createObjectURL(blob);
         imageDisplay.src = url;
@@ -57,6 +62,7 @@ function processRawFile(file) {
         imageDisplay.style.display = 'block';
     })
     .catch((error) => {
-        console.error('Error:', error);
+        spinner.style.display = 'none';
+        alert('Error: ' + error.message);
     });
 }

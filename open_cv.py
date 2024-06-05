@@ -11,5 +11,4 @@ def open_cv(file_to_check):
 
     # Process the image with segmentation
     ternary_mask = segmentation.create_ternary_mask(img)
-    print(ternary_mask)
     return ternary_mask
